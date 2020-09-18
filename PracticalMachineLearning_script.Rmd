@@ -1,0 +1,93 @@
+---
+title: "Practical Machine Learning Project"
+author: "Anastasia Illarionova"
+date: "September 17, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. Weight Lifting Exercise Dataset. Exploratory analysis
+
+This project is dedicated for the exploration of Weight Lifting Exercise Dataset. The main goal is to predict the manner in which participants did the exercise based on available metrics.
+The variable that has to be predicted, classe, includes 5 classes: A, B, C, D and E. We checked two non-linear model fittings for a prediction: Descision Tree and Random Forest, implemented in a caret R package (v6.0-86). Final model was applied on a testing test with 20 observations.
+The original datasets was uploaded without the index and the datetime (fourth) columns which were not considered as predictor variables.
+```{r environment, echo = TRUE, message=FALSE, warning=FALSE}
+suppressPackageStartupMessages(library(readr))
+suppressPackageStartupMessages(library(ggfortify))
+suppressPackageStartupMessages(library(caret))
+suppressPackageStartupMessages(library(randomForest))
+suppressPackageStartupMessages(library(ggpubr))
+```
+
+```{r data, echo = TRUE, message=FALSE, warning=FALSE}
+pml_testing = read_csv("pml-testing.csv", col_types = cols(X1 = col_skip(), cvtd_timestamp = col_skip()), na = c("NA", "#DIV/0!", ""))
+pml_training = read_csv("pml-training.csv", col_types = cols(X1 = col_skip(), cvtd_timestamp = col_skip()), na = c("NA", "#DIV/0!", ""))
+
+# Convert classe and user_name variables into a factor type
+pml_training$classe = as.factor(pml_training$classe)
+pml_training$user_name = as.factor(pml_training$user_name)
+```
+
+Cleaning data step was performed, during which columns with more then 90% of missing values (NA) were removed.
+
+```{r cleaning, echo = TRUE, message=FALSE, warning=FALSE}
+training = pml_training[, which(colSums(is.na(pml_training))/nrow(pml_training) <= 0.9)]
+testing = pml_testing[, colnames(training)[1:57]]
+```
+
+We conducted a PCA and plotted the first two PCs to access variability and clustering pattern of data (Figure 1).
+```{r pca, echo = TRUE, fig.width=9, fig.height = 3, warning=FALSE}
+pca_res <- prcomp(training[, -c(1,4, 58)], na.omit=TRUE, scale. = TRUE)
+
+cl = autoplot(pca_res, data = training, colour = "classe")
+u = autoplot(pca_res, data = training, colour = "user_name")
+
+ggarrange(cl, u, labels = c("A", "B"), ncol = 2, nrow = 1)
+```
+
+Figure1. PCA plot of a training dataset. Observations are colored by A) classe and B) user name.
+
+As can be seen from the Figure 1 the cases are clustered by users. Observations comming from different performance classes form subclusters within the main groups. The first and the second PCs explains ~30% of overall variability.
+
+## 2. Class prediction
+
+We started to fit the data with non-linear models for the class prediction. First, we separate data into training and cross-validation sets.
+```{r sep, echo = TRUE, message=FALSE}
+set.seed(10)
+train_index = createDataPartition(training$classe, p = 3/4)[[1]]
+tdf = training[train_index, ]
+
+# Create a non-overlapping cross-validation dataset
+vdf = training[-train_index, ]
+```
+
+Next, we applied a Descision Tree algorithm. During the preprocess step the input predictor variables were centered and scaled.
+```{r dt, echo = TRUE, cache=TRUE}
+modelFit_dt = train(classe ~ .,data = tdf, preProcess = c("center", "scale"), method = 'rpart')
+DT_output_cross_v = predict(modelFit_dt, vdf)
+confusionMatrix(vdf$classe, DT_output_cross_v)
+```
+
+As can be seen from the confusion matrix, the overall accuracy is low and the No Information Rate is high which means that the model does not do any usefull predictions and may be skewed to the class with a majority of instances (A, 30%).
+
+Thus, we run a Random Forest algorithm on the same data set. As before the input predictor variables were centered and scaled.
+```{r rf, echo = TRUE, cache=TRUE}
+modelFit_rf = train(classe ~ .,data = tdf, preProcess = c("center", "scale"), method = "rf")
+RF_output_cross_v = predict(modelFit_rf, vdf)
+confusionMatrix(vdf$classe, RF_output_cross_v)
+```
+
+This model predicts the class variable much better on a cross validation step with a overall accuracy > 0.99 and a No Information Rate less than 30%.
+modelFit_rf was used to predict 20 cases from a testing dataset. The model worked with a 100% accuracy.
+
+
+
+
+
+
+
+
+

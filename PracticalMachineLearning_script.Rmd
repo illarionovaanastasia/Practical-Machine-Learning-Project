@@ -50,11 +50,11 @@ ggarrange(cl, u, labels = c("A", "B"), ncol = 2, nrow = 1)
 
 Figure1. PCA plot of a training dataset. Observations are colored by A) classe and B) user name.
 
-As can be seen from the Figure 1 the cases are clustered by users. Observations comming from different performance classes form subclusters within the main groups. The first and the second PCs explains ~30% of overall variability.
+As can be seen from the Figure 1 the cases are clustered by users. Observations coming from different performance classes form subclusters within the main groups. The first and the second PCs explains ~30% of overall variability.
 
 ## 2. Class prediction
 
-We started to fit the data with non-linear models for the class prediction. First, we separate data into training and cross-validation sets.
+We started to fit the data with non-linear models for the class prediction. First, we separated data into training and cross-validation sets.
 ```{r sep, echo = TRUE, message=FALSE}
 set.seed(10)
 train_index = createDataPartition(training$classe, p = 3/4)[[1]]
@@ -64,7 +64,7 @@ tdf = training[train_index, ]
 vdf = training[-train_index, ]
 ```
 
-Next, we applied a Descision Tree algorithm. During the preprocess step the input predictor variables were centered and scaled.
+Next, we applied a Descision Tree algorithm. During the preprocessing step the input predictor variables were centered and scaled.
 ```{r dt, echo = TRUE, cache=TRUE}
 modelFit_dt = train(classe ~ .,data = tdf, preProcess = c("center", "scale"), method = 'rpart')
 DT_output_cross_v = predict(modelFit_dt, vdf)
